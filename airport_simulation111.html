@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机场航班仿真系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .control-panel {
+            background: #f8fafc;
+            padding: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+        
+        .time-display {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #1f2937;
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: linear-gradient(135deg, #e0f2fe, #b3e5fc);
+            border-radius: 10px;
+        }
+        
+        .airports-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 25px;
+            padding: 30px;
+        }
+        
+        .airport-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+        
+        .airport-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .airport-header {
+            padding: 20px;
+            color: white;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.3em;
+        }
+        
+        .airport-A .airport-header { background: linear-gradient(135deg, #e11d48, #be185d); }
+        .airport-B .airport-header { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+        .airport-C .airport-header { background: linear-gradient(135deg, #10b981, #059669); }
+        .airport-D .airport-header { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        
+        .flight-list {
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 15px;
+        }
+        
+        .flight-item {
+            background: #f8fafc;
+            border-left: 4px solid #3b82f6;
+            margin-bottom: 12px;
+            padding: 15px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .flight-item:hover {
+            background: #e0f2fe;
+            transform: translateX(5px);
+        }
+        
+        .flight-item.delayed {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+        }
+        
+        .flight-number {
+            font-weight: bold;
+            color: #1f2937;
+            font-size: 1.1em;
+            margin-bottom: 8px;
+        }
+        
+        .route {
+            color: #6b7280;
+            margin-bottom: 5px;
+        }
+        
+        .time-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9em;
+        }
+        
+        .departure-time, .arrival-time {
+            font-weight: 600;
+        }
+        
+        .gate {
+            background: #3b82f6;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+        }
+        
+        .status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+        
+        .status-normal { background: #dcfce7; color: #166534; }
+        .status-delayed { background: #fee2e2; color: #991b1b; }
+        .status-weather { background: #fef3c7; color: #92400e; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .modal h3 {
+            margin-bottom: 20px;
+            color: #1f2937;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .form-group select, .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .form-group select:focus, .form-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6b7280;
+        }
+        
+        .close:hover {
+            color: #ef4444;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6b7280;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1✈️ 机场航班仿真系统</h1>
+            <p>实时航班监控与异常处理系统</p>
+        </div>
+        
+        <div class="control-panel">
+            <div class="control-buttons">
+                <button class="btn btn-primary" onclick="startSimulation()">开始仿真</button>
+                <button class="btn btn-warning" onclick="pauseSimulation()">暂停仿真</button>
+                <button class="btn btn-success" onclick="resetSimulation()">重置系统</button>
+                <button class="btn btn-danger" onclick="showAirModal()">航路拥堵</button>
+                <button class="btn btn-danger" onclick="showWeatherModal()">天气异常</button>
+                <button class="btn btn-danger" onclick="showCompanyModal()">航司问题</button>
+            </div>
+            
+            <div class="time-display" id="currentTime">
+                当前仿真时间: 06:00
+            </div>
+        </div>
+        
+        <div class="airports-container">
+            <div class="airport-card airport-A">
+                <div class="airport-header">
+                    🏢 A机场 (3个航站楼 - T3R3)
+                </div>
+                <div class="flight-list" id="airport-A">
+                    <div class="loading">正在加载航班信息...</div>
+                </div>
+            </div>
+            
+            <div class="airport-card airport-B">
+                <div class="airport-header">
+                    🏢 B机场 (2个航站楼 - T2R2)
+                </div>
+                <div class="flight-list" id="airport-B">
+                    <div class="loading">正在加载航班信息...</div>
+                </div>
+            </div>
+            
+            <div class="airport-card airport-C">
+                <div class="airport-header">
+                    🏢 C机场 (2个航站楼 - T2R2)
+                </div>
+                <div class="flight-list" id="airport-C">
+                    <div class="loading">正在加载航班信息...</div>
+                </div>
+            </div>
+            
+            <div class="airport-card airport-D">
+                <div class="airport-header">
+                    🏢 D机场 (1个航站楼 - T1R1)
+                </div>
+                <div class="flight-list" id="airport-D">
+                    <div class="loading">正在加载航班信息...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 异常处理模态框 -->
+    <div id="airModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('airModal')">&times;</span>
+            <h3>🚫 航路拥堵异常</h3>
+            <div class="form-group">
+                <label>选择受影响机场:</label>
+                <select id="airAirport">
+                    <option value="A">A机场</option>
+                    <option value="B">B机场</option>
+                    <option value="C">C机场</option>
+                    <option value="D">D机场</option>
+                </select>
+            </div>
+            <button class="btn btn-danger" onclick="triggerAirCongestion()">触发航路拥堵</button>
+        </div>
+    </div>
+    
+    <div id="weatherModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('weatherModal')">&times;</span>
+            <h3>🌧️ 天气异常</h3>
+            <div class="form-group">
+                <label>选择受影响机场:</label>
+                <select id="weatherAirport">
+                    <option value="A">A机场</option>
+                    <option value="B">B机场</option>
+                    <option value="C">C机场</option>
+                    <option value="D">D机场</option>
+                </select>
+            </div>
+            <button class="btn btn-danger" onclick="triggerWeatherDelay()">触发天气异常</button>
+        </div>
+    </div>
+    
+    <div id="companyModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('companyModal')">&times;</span>
+            <h3>🏢 航司问题</h3>
+            <div class="form-group">
+                <label>选择受影响航班:</label>
+                <select id="companyFlight">
+                    <!-- 动态填充 -->
+                </select>
+            </div>
+            <button class="btn btn-danger" onclick="triggerCompanyDelay()">触发航司问题</button>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentTime = 360; // 6:00 AM in minutes
+        let isSimulationRunning = false;
+        let simulationInterval = null;
+        let flights = [];
+        let airportCapacity = { A: 3, B: 2, C: 2, D: 1 };
+        let gateUsage = { A: [], B: [], C: [], D: [] };
+        let weatherDelays = {};
+        
+        // 初始化登机口
+        function initializeGates() {
+            for (let airport in gateUsage) {
+                gateUsage[airport] = Array(15).fill(null);
+            }
+        }
+        
+        // 分配登机口
+        function assignGate(airport) {
+            for (let i = 0; i < gateUsage[airport].length; i++) {
+                if (gateUsage[airport][i] === null) {
+                    gateUsage[airport][i] = true;
+                    return i + 1;
+                }
+            }
+            return Math.floor(Math.random() * 15) + 1; // 如果没有空闲登机口，随机分配
+        }
+        
+        // 释放登机口
+        function releaseGate(airport, gate) {
+            if (gate && gate <= 15) {
+                gateUsage[airport][gate - 1] = null;
+            }
+        }
+        
+        // 创建基础航班数据
+        function createBaseFlights() {
+            // 原始指定的航线
+            const originalRoutes = [
+                { code: 'SYSU01', route: ['A', 'B', 'C'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU02', route: ['B', 'A', 'D'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU03', route: ['C', 'A'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU04', route: ['D', 'A', 'B'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU05', route: ['A', 'B'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU06', route: ['A', 'D'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU07', route: ['A', 'B'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU08', route: ['A', 'B'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU09', route: ['C', 'B'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU10', route: ['B', 'A'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU11', route: ['B', 'A', 'D'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU12', route: ['B', 'C'], series: ['SYSU', 'SSSE', 'OVO'] }
+            ];
+            
+            // 智能补充的航线（保证四地互通）
+            const additionalRoutes = [
+                // 直飞航线补充
+                { code: 'SYSU13', route: ['A', 'C'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU14', route: ['C', 'D'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU15', route: ['B', 'D'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU16', route: ['D', 'B'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU17', route: ['D', 'C'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU18', route: ['C', 'A'], series: ['SYSU', 'SSSE', 'OVO'] },
+                
+                // 中转航线补充
+                { code: 'SYSU19', route: ['A', 'C', 'B'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU20', route: ['B', 'C', 'A'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU21', route: ['C', 'A', 'D'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU22', route: ['D', 'A', 'C'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU23', route: ['C', 'B', 'A'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU24', route: ['A', 'B', 'D'], series: ['SYSU', 'SSSE', 'OVO'] },
+                
+                // 环线航线
+                { code: 'SYSU25', route: ['A', 'B', 'C'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU26', route: ['B', 'C', 'A'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU27', route: ['C', 'A', 'B'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU28', route: ['D', 'A', 'B'], series: ['SYSU', 'SSSE', 'OVO'] },
+                
+                // 白天高频航线
+                { code: 'SYSU29', route: ['A', 'B'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU30', route: ['B', 'A'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU31', route: ['A', 'C'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU32', route: ['C', 'A'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU33', route: ['A', 'D'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU34', route: ['D', 'A'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU35', route: ['B', 'C'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU36', route: ['C', 'B'], series: ['SYSU', 'SSSE', 'OVO'] },
+                
+                // 夜间航线（22:00-06:00）
+                { code: 'SYSU37', route: ['A', 'B'], series: ['SYSU', 'SSSE', 'OVO'] }, // 夜间商务线
+                { code: 'SYSU38', route: ['B', 'A'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU39', route: ['A', 'C'], series: ['SYSU', 'SSSE', 'OVO'] }, // 夜间干线
+                { code: 'SYSU40', route: ['C', 'A'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU41', route: ['A', 'D'], series: ['SYSU', 'SSSE', 'OVO'] }, // 夜间快线
+                { code: 'SYSU42', route: ['D', 'A'], series: ['SYSU', 'SSSE', 'OVO'] },
+                
+                // 红眼航班（00:00-06:00）
+                { code: 'SYSU43', route: ['B', 'C'], series: ['SYSU', 'SSSE', 'OVO'] }, // 红眼货运线
+                { code: 'SYSU44', route: ['C', 'B'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU45', route: ['B', 'D'], series: ['SYSU', 'SSSE', 'OVO'] }, // 红眼连接线
+                { code: 'SYSU46', route: ['D', 'B'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU47', route: ['C', 'D'], series: ['SYSU', 'SSSE', 'OVO'] }, // 红眼支线
+                { code: 'SYSU48', route: ['D', 'C'], series: ['SYSU', 'SSSE', 'OVO'] },
+                
+                // 凌晨航线（03:00-05:30）
+                { code: 'SYSU49', route: ['A', 'B', 'C'], series: ['SYSU', 'SSSE', 'OVO'] }, // 凌晨中转
+                { code: 'SYSU50', route: ['C', 'B', 'A'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU51', route: ['B', 'A', 'D'], series: ['SYSU', 'SSSE', 'OVO'] }, // 凌晨快递
+                { code: 'SYSU52', route: ['D', 'A', 'B'], series: ['SYSU', 'SSSE', 'OVO'] },
+                
+                // 早班加密航线（05:30-08:00）
+                { code: 'SYSU53', route: ['A', 'B'], series: ['SYSU', 'SSSE', 'OVO'] }, // 早班通勤
+                { code: 'SYSU54', route: ['B', 'A'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU55', route: ['A', 'C'], series: ['SYSU', 'SSSE', 'OVO'] }, // 早班商务
+                { code: 'SYSU56', route: ['C', 'A'], series: ['SYSU', 'SSSE', 'OVO'] },
+                { code: 'SYSU57', route: ['B', 'C'], series: ['SYSU', 'SSSE', 'OVO'] }, // 早班接驳
+                { code: 'SYSU58', route: ['C', 'B'], series: ['SYSU', 'SSSE', 'OVO'] },
+                
+                // 深夜货运专线（01:00-04:00）
+                { code: 'SYSU59', route: ['A', 'D'], series: ['SYSU', 'SSSE', 'OVO'] }, // 深夜货运
+                { code: 'SYSU60', route: ['D', 'A'], series: ['SYSU', 'SSSE', 'OVO'] }
+            ];
+            
+            const allRoutes = [...originalRoutes, ...additionalRoutes];
+            
+            flights = [];
+            let flightId = 0;
+            let timeSlots = generateTimeSlots(); // 生成时间段
+            let slotIndex = 0;
+            
+            allRoutes.forEach(baseRoute => {
+                baseRoute.series.forEach(series => {
+                    const flightCode = baseRoute.code.replace('SYSU', series);
+                    
+                    // 分配时间段
+                    const departureTime = timeSlots[slotIndex % timeSlots.length];
+                    slotIndex++;
+                    
+                    // 前程航班
+                    const outboundFlight = {
+                        id: flightId++,
+                        flightNumber: flightCode,
+                        route: [...baseRoute.route],
+                        currentSegment: 0,
+                        departureTime: departureTime,
+                        arrivalTime: calculateArrivalTime(departureTime, baseRoute.route),
+                        status: 'scheduled',
+                        gate: null,
+                        delay: 0,
+                        isReturn: false
+                    };
+                    
+                    // 计算返程时间
+                    const returnDepartureTime = outboundFlight.arrivalTime + 100; // 100分钟间隔
+                    const returnRoute = [...baseRoute.route].reverse();
+                    
+                    // 返程航班
+                    const returnFlight = {
+                        id: flightId++,
+                        flightNumber: flightCode + 'R',
+                        route: returnRoute,
+                        currentSegment: 0,
+                        departureTime: returnDepartureTime,
+                        arrivalTime: calculateArrivalTime(returnDepartureTime, returnRoute),
+                        status: 'scheduled',
+                        gate: null,
+                        delay: 0,
+                        isReturn: true
+                    };
+                    
+                    flights.push(outboundFlight, returnFlight);
+                });
+            });
+            
+            // 按起飞时间排序
+            flights.sort((a, b) => a.departureTime - b.departureTime);
+        }
+        
+        // 生成合理的时间段分配
+        function generateTimeSlots() {
+            const slots = [];
+            
+            // 早班航线 (5:30-9:00) - 密集发班
+            for (let hour = 5; hour <= 9; hour++) {
+                const startMin = hour === 5 ? 30 : 0;
+                for (let min = startMin; min < 60; min += 12) {
+                    slots.push(hour * 60 + min);
+                }
+            }
+            
+            // 上午航线 (9:00-12:00) - 商务高峰
+            for (let hour = 9; hour <= 12; hour++) {
+                for (let min = 0; min < 60; min += 15) {
+                    slots.push(hour * 60 + min);
+                }
+            }
+            
+            // 下午航线 (12:00-18:00) - 全天主力
+            for (let hour = 12; hour <= 18; hour++) {
+                for (let min = 0; min < 60; min += 10) {
+                    slots.push(hour * 60 + min);
+                }
+            }
+            
+            // 晚班航线 (18:00-22:00) - 下班高峰
+            for (let hour = 18; hour <= 22; hour++) {
+                for (let min = 0; min < 60; min += 18) {
+                    slots.push(hour * 60 + min);
+                }
+            }
+            
+            // 夜班航线 (22:00-01:00) - 夜间服务
+            for (let hour = 22; hour <= 24; hour++) {
+                for (let min = 0; min < 60; min += 25) {
+                    if (hour === 24 && min > 0) break; // 避免超过24:00
+                    slots.push(hour === 24 ? min : hour * 60 + min);
+                }
+            }
+            
+            // 深夜航线 (01:00-03:00) - 红眼航班
+            for (let hour = 1; hour <= 3; hour++) {
+                for (let min = 0; min < 60; min += 35) {
+                    slots.push(hour * 60 + min);
+                }
+            }
+            
+            // 凌晨航线 (03:00-05:30) - 货运和早班准备
+            for (let hour = 3; hour <= 5; hour++) {
+                const endMin = hour === 5 ? 30 : 60;
+                for (let min = 0; min < endMin; min += 40) {
+                    slots.push(hour * 60 + min);
+                }
+            }
+            
+            // 随机打乱时间段
+            return slots.sort(() => Math.random() - 0.5);
+        }
+        
+        // 计算到达时间
+        function calculateArrivalTime(departureTime, route) {
+            let totalTime = 0;
+            
+            for (let i = 0; i < route.length - 1; i++) {
+                const from = route[i];
+                const to = route[i + 1];
+                
+                // 飞行时间
+                if ((from === 'D' && to === 'A') || (from === 'A' && to === 'D')) {
+                    totalTime += 90; // 1.5小时
+                } else {
+                    totalTime += 120; // 2小时
+                }
+                
+                // 起降时间
+                totalTime += 20; // 起飞10分钟 + 降落10分钟
+                
+                // 中转时间（如果不是最后一段）
+                if (i < route.length - 2) {
+                    totalTime += 70; // 1小时10分钟中转
+                }
+            }
+            
+            return departureTime + totalTime;
+        }
+        
+        // 格式化时间显示
+        function formatTime(minutes) {
+            // 处理跨天的情况
+            let totalMinutes = minutes;
+            let day = 0;
+            
+            while (totalMinutes >= 1440) { // 1440 = 24 * 60
+                totalMinutes -= 1440;
+                day++;
+            }
+            
+            const hours = Math.floor(totalMinutes / 60);
+            const mins = totalMinutes % 60;
+            const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+            
+            if (day > 0) {
+                return `${timeStr}+${day}`;
+            }
+            
+            // 标记红眼航班时间段
+            if (hours >= 0 && hours < 6) {
+                return `${timeStr} 🌙`;
+            } else if (hours >= 22 || hours < 2) {
+                return `${timeStr} 🌃`;
+            }
+            
+            return timeStr;
+        }
+        
+        // 获取当前机场的航班
+        function getAirportFlights(airport) {
+            const now = currentTime;
+            return flights.filter(flight => {
+                // 显示即将起飞、正在飞行或刚刚到达的航班
+                const currentLocation = flight.route[flight.currentSegment];
+                const nextLocation = flight.route[flight.currentSegment + 1];
+                
+                return (currentLocation === airport || 
+                       (nextLocation === airport && flight.departureTime + flight.delay <= now + 240)) &&
+                       flight.departureTime + flight.delay >= now && // 显示现在的航班
+                       flight.departureTime + flight.delay <= now + 1440; // 显示未来16小时的航班
+            }).sort((a, b) => (a.departureTime + a.delay) - (b.departureTime + b.delay));
+        }
+        
+        // 更新航班显示
+        function updateFlightDisplay() {
+            ['A', 'B', 'C', 'D'].forEach(airport => {
+                const container = document.getElementById(`airport-${airport}`);
+                const airportFlights = getAirportFlights(airport);
+                
+                if (airportFlights.length === 0) {
+                    container.innerHTML = '<div class="loading">暂无航班信息</div>';
+                    return;
+                }
+                
+                container.innerHTML = airportFlights.map(flight => {
+                    const departureTime = flight.departureTime + flight.delay;
+                    const arrivalTime = flight.arrivalTime + flight.delay;
+                    const routeDisplay = flight.route.join(' → ');
+                    
+                    let statusClass = 'status-normal';
+                    let statusText = '正常';
+                    
+                    if (flight.delay > 0) {
+                        statusClass = 'status-delayed';
+                        statusText = `延误${flight.delay}分钟`;
+                    }
+                    
+                    if (weatherDelays[airport] && weatherDelays[airport].active) {
+                        statusClass = 'status-weather';
+                        statusText = '天气影响';
+                    }
+                    
+                    // 分配登机口
+                    if (!flight.gate) {
+                        flight.gate = assignGate(airport);
+                    }
+                    
+                    return `
+                        <div class="flight-item ${flight.delay > 0 ? 'delayed' : ''}">
+                            <div class="flight-number">${flight.flightNumber}</div>
+                            <div class="route">航线: ${routeDisplay}</div>
+                            <div class="time-info">
+                                <span class="departure-time">起飞: ${formatTime(departureTime)}</span>
+                                <span class="arrival-time">到达: ${formatTime(arrivalTime)}</span>
+                            </div>
+                            <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+                                <span class="gate">登机口 ${flight.gate}</span>
+                                <span class="status ${statusClass}">${statusText}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            });
+        }
+        
+        // 更新时间显示
+        function updateTimeDisplay() {
+            const timeStr = formatTime(currentTime);
+            const dayStr = Math.floor(currentTime / 1440) > 0 ? ` (第${Math.floor(currentTime / 1440) + 1}天)` : '';
+            document.getElementById('currentTime').textContent = `当前仿真时间: ${timeStr}${dayStr}`;
+        }
+        
+        // 开始仿真
+        function startSimulation() {
+            if (!isSimulationRunning) {
+                isSimulationRunning = true;
+                simulationInterval = setInterval(() => {
+                    currentTime += 1; // 每秒增加1分钟
+                    updateTimeDisplay();
+                    updateFlightDisplay();
+                    processWeatherDelays();
+                }, 1000);
+            }
+        }
+        
+        // 暂停仿真
+        function pauseSimulation() {
+            isSimulationRunning = false;
+            if (simulationInterval) {
+                clearInterval(simulationInterval);
+                simulationInterval = null;
+            }
+        }
+        
+        // 重置仿真
+        function resetSimulation() {
+            pauseSimulation();
+            currentTime = 360;
+            weatherDelays = {};
+            initializeGates();
+            createBaseFlights();
+            updateTimeDisplay();
+            updateFlightDisplay();
+        }
+        
+        // 处理天气延误
+        function processWeatherDelays() {
+            Object.keys(weatherDelays).forEach(airport => {
+                const weather = weatherDelays[airport];
+                if (weather.active && currentTime >= weather.endTime) {
+                    delete weatherDelays[airport];
+                }
+            });
+        }
+        
+        // 显示模态框
+        function showAirModal() {
+            document.getElementById('airModal').style.display = 'block';
+        }
+        
+        function showWeatherModal() {
+            document.getElementById('weatherModal').style.display = 'block';
+        }
+        
+        function showCompanyModal() {
+            const select = document.getElementById('companyFlight');
+            select.innerHTML = flights.map(flight => 
+                `<option value="${flight.id}">${flight.flightNumber} (${flight.route.join('→')})</option>`
+            ).join('');
+            document.getElementById('companyModal').style.display = 'block';
+        }
+        
+        // 关闭模态框
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+        
+        // 触发航路拥堵
+        function triggerAirCongestion() {
+            const airport = document.getElementById('airAirport').value;
+            const affectedFlights = flights.filter(flight => 
+                flight.route.includes(airport) && flight.departureTime <= currentTime + 30
+            );
+            
+            affectedFlights.forEach((flight, index) => {
+                flight.delay += 5; // 每架飞机延误5分钟递增
+            });
+            
+            closeModal('airModal');
+            updateFlightDisplay();
+            alert(`${airport}机场航路拥堵已触发，${affectedFlights.length}个航班受影响`);
+        }
+        
+        // 触发天气异常
+        function triggerWeatherDelay() {
+            const airport = document.getElementById('weatherAirport').value;
+            
+            weatherDelays[airport] = {
+                active: true,
+                startTime: currentTime,
+                endTime: currentTime + 60
+            };
+            
+            // 影响相关航班
+            const affectedFlights = flights.filter(flight => 
+                flight.route.includes(airport) && 
+                flight.departureTime + flight.delay >= currentTime &&
+                flight.departureTime + flight.delay <= currentTime + 120
+            );
+            
+            affectedFlights.forEach(flight => {
+                flight.delay += 60; // 延误1小时
+            });
+            
+            closeModal('weatherModal');
+            updateFlightDisplay();
+            alert(`${airport}机场天气异常已触发，影响${affectedFlights.length}个航班`);
+        }
+        
+        // 触发航司问题
+        function triggerCompanyDelay() {
+            const flightId = parseInt(document.getElementById('companyFlight').value);
+            const flight = flights.find(f => f.id === flightId);
+            
+            if (flight) {
+                flight.delay += 30; // 延误30分钟
+                // 重新分配登机口
+                const currentLocation = flight.route[flight.currentSegment];
+                flight.gate = assignGate(currentLocation);
+            }
+            
+            closeModal('companyModal');
+            updateFlightDisplay();
+            alert(`航班 ${flight.flightNumber} 因航司问题延误30分钟`);
+        }
+        
+        // 初始化系统
+        function initializeSystem() {
+            initializeGates();
+            createBaseFlights();
+            updateTimeDisplay();
+            updateFlightDisplay();
+            
+            // 填充航司问题选择框
+            const select = document.getElementById('companyFlight');
+            select.innerHTML = flights.map(flight => 
+                `<option value="${flight.id}">${flight.flightNumber} (${flight.route.join('→')})</option>`
+            ).join('');
+        }
+        
+        // 页面加载完成后初始化
+        window.addEventListener('load', initializeSystem);
+        
+        // 点击模态框外部关闭
+        window.addEventListener('click', function(event) {
+            const modals = ['airModal', 'weatherModal', 'companyModal'];
+            modals.forEach(modalId => {
+                const modal = document.getElementById(modalId);
+                if (event.target === modal) {
+                    closeModal(modalId);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
